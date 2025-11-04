@@ -71,6 +71,20 @@ export const projectsApi = {
       params: { id },
     })
   },
+
+  update: async (id: string, name: string, description?: string) => {
+    return callFunction<Project>('update-project', {
+      method: 'POST',
+      body: { id, name, description },
+    })
+  },
+
+  delete: async (id: string) => {
+    return callFunction<{ success: boolean }>('delete-project', {
+      method: 'DELETE',
+      params: { id },
+    })
+  },
 }
 
 // Notes API
@@ -85,6 +99,20 @@ export const notesApi = {
     return callFunction<Note>('create-note', {
       method: 'POST',
       body: { project_id: projectId, content },
+    })
+  },
+
+  update: async (id: string, content: string) => {
+    return callFunction<Note>('update-note', {
+      method: 'POST',
+      body: { id, content },
+    })
+  },
+
+  delete: async (id: string) => {
+    return callFunction<{ success: boolean }>('delete-note', {
+      method: 'DELETE',
+      params: { id },
     })
   },
 }

@@ -1,5 +1,6 @@
 import { useState, useEffect, FormEvent } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { Pencil, Trash2 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { projectsApi, notesApi, Note } from '../lib/api'
 
@@ -16,6 +17,9 @@ export default function Notes() {
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState('')
+  const [editingNote, setEditingNote] = useState<Note | null>(null)
+  const [editContent, setEditContent] = useState('')
+  const [updating, setUpdating] = useState(false)
   const { user } = useAuth()
   const navigate = useNavigate()
 
@@ -71,6 +75,51 @@ export default function Notes() {
     setCreating(false)
   }
 
+  const handleEdit = (note: Note) => {
+    setEditingNote(note)
+    setEditContent(note.content)
+    setError('')
+  }
+
+  const handleUpdate = async (e: FormEvent) => {
+    e.preventDefault()
+    if (!editingNote) return
+
+    setUpdating(true)
+    setError('')
+
+    const { error } = await notesApi.update(editingNote.id, editContent)
+
+    if (error) {
+      setError(error)
+    } else {
+      setEditingNote(null)
+      fetchNotes()
+    }
+    setUpdating(false)
+  }
+
+  const handleDelete = async (noteId: string) => {
+    if (!confirm('Are you sure you want to delete this note?')) {
+      return
+    }
+
+    setError('')
+    const { error } = await notesApi.delete(noteId)
+
+    if (error) {
+      setError(error)
+    } else {
+      fetchNotes()
+    }
+  }
+
+  const handleCancelEdit = () => {
+    setEditingNote(null)
+    setEditContent('')
+    setError('')
+  }
+
   return (
     <div className="container">
       <header className="header">
@@ -114,6 +163,22 @@ export default function Notes() {
           <div className="notes-grid">
             {notes.map((note) => (
               <div key={note.id} className="note-card">
+                <div className="card-actions">
+                  <button
+                    className="icon-btn"
+                    onClick={() => handleEdit(note)}
+                    title="Edit note"
+                  >
+                    <Pencil size={16} />
+                  </button>
+                  <button
+                    className="icon-btn icon-btn-danger"
+                    onClick={() => handleDelete(note.id)}
+                    title="Delete note"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
                 <p className="note-content">{note.content}</p>
                 <span className="date">
                   {new Date(note.created_at).toLocaleString()}
@@ -123,6 +188,42 @@ export default function Notes() {
           </div>
         )}
       </div>
+
+      {editingNote && (
+        <div className="modal-overlay" onClick={handleCancelEdit}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h2>Edit Note</h2>
+            <form onSubmit={handleUpdate}>
+              {error && <div className="error-message">{error}</div>}
+              <div className="form-group">
+                <label htmlFor="edit-content">Note Content</label>
+                <textarea
+                  id="edit-content"
+                  value={editContent}
+                  onChange={(e) => setEditContent(e.target.value)}
+                  required
+                  disabled={updating}
+                  rows={6}
+                  placeholder="Write your note here..."
+                />
+              </div>
+              <div className="modal-actions">
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={handleCancelEdit}
+                  disabled={updating}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn-primary" disabled={updating}>
+                  {updating ? 'Updating...' : 'Update Note'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
